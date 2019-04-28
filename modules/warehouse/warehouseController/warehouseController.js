@@ -1,6 +1,8 @@
 var async = require('async');
 var upload = require("express-fileupload");
 var csvtojson = require("csvtojson");
+var Parallel = require("async-parallel");
+var Promise  = require('bluebird');
 
 var logging = require('../../../logging/logging_improved');
 var responses = require('../../../responses/responses');
@@ -262,34 +264,37 @@ async function generateWHReplenishment(req,res) {
         var whInvenDate = req.body.wh_inventory_date;
         var storeInvenDate = req.body.store_inventory_date;
 
-        var output = [];
-
         var products = await warehouseServices.getAllProducts(handlerInfo,[brandId, whId, whInvenDate]);
 
+        var tasks = [];
+
         for (var product of products){
+            var getOpts = {
+                values  :   [product.product_id, storeInvenDate, product.product_id],
+                product :   product
+            };
+            tasks.push(warehouseServices.getReqQuantity(handlerInfo, getOpts));
+            // if(product.product_id == "19FEW11064-110211-10"){
+            //     tasks.push(warehouseServices.getReqQuantity(handlerInfo, getOpts));
+            // }
+        }
 
-            logging.trace(handlerInfo, product);
+        var parallelTasks = Promise.all(tasks);
+        var taskResult = await parallelTasks;
 
-            var productDetails = await warehouseServices.getReqQuantity(handlerInfo, [product.product_id, storeInvenDate, product.product_id]);
+        //logging.trace(handlerInfo, {taskResult : taskResult});
 
-            if(productDetails.length > 0){
-                var total = product.quantity;
-                for(var store of productDetails){
-                    var curr_req_qty =  store.req_qty;
+        var output = [];
 
-                    if(curr_req_qty <= total){
-                        total = total - curr_req_qty;
-
-                        output.push({
-                            warehouse_id    :   whId,
-                            store_id        :   store.store_id,
-                            product_id      :   product.product_id,
-                            replenish_qty   :   curr_req_qty
-                        });
-                    }
+        for (var i=0;i<taskResult.length;i++){
+            if(taskResult[0].length > 0){
+                for(var singleResult of taskResult[i]){
+                    output.push(singleResult);
                 }
             }
         }
+
+        //logging.trace(handlerInfo, {OUTPUT : output});
 
         const {Parser} = require('json2csv');
         const fs = require('fs');
@@ -309,7 +314,7 @@ async function generateWHReplenishment(req,res) {
         res.setHeader('Content-disposition', 'attachment; filename=testing.csv');
         res.set('Content-Type', 'text/csv');
 
-        return  res.status(200).send(csv);
+        return responses.actionCompleteResponse(handlerInfo, res);
 
     } catch(error) {
         var response = {
@@ -318,5 +323,41 @@ async function generateWHReplenishment(req,res) {
         };
         logging.trace(handlerInfo, {RESPONSE_SENT: response});
         return responses.somethingWentWrongError(handlerInfo, res);
+    }
+}
+
+async function singleProductJob(handlerInfo, product, storeInvenDate) {
+    try{
+        logging.trace(handlerInfo, product);
+
+        var productDetails = await warehouseServices.getReqQuantity(handlerInfo, [product.product_id, storeInvenDate, product.product_id]);
+
+        if(productDetails.length > 0){
+            var total = product.quantity;
+            for(var store of productDetails){
+                var curr_req_qty =  store.req_qty;
+
+                if(curr_req_qty <= total){
+                    total = total - curr_req_qty;
+
+                    var opts = {
+                        warehouse_id    :   whId,
+                        store_id        :   store.store_id,
+                        product_id      :   product.product_id,
+                        replenish_qty   :   curr_req_qty
+                    };
+
+                    output.push(opts);
+
+                    logging.trace(handlerInfo. opts);
+                }
+            }
+        }
+
+        return true;
+
+    } catch(error) {
+
+        return null;
     }
 }
