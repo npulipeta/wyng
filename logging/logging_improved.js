@@ -32,7 +32,14 @@ var debuggingPermissions = {
         loggingEnabled      : true,
 	    defaultLoggingLevel : levels.trace,
 
-        addBrand            : true
+        addBrand            : true,
+        addStores           : true,
+        addProducts         : true,
+        addBSQ              : true,
+        addStoreInventory   : true,
+        addWHInventory      : true,
+
+        generateWHReplenishment: true
     }
 };
 

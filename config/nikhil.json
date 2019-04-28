@@ -1,5 +1,5 @@
 {
-  "PORT" : 5000,
+  "PORT" : 6001,
   "databaseSettings" :{
     "host"      : "remotemysql.com",
     "user"      :  "c7dJ7C7kO3",

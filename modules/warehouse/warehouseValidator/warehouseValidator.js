@@ -6,6 +6,7 @@ var constants                                   = require('./../../../properties
 
 
 exports.addBrand           = addBrand;
+exports.generateWHReplenishment = generateWHReplenishment;
 
 function validateFields(handlerInfo, req, res, schema) {
     var validation = Joi.validate(req, schema);
@@ -33,6 +34,29 @@ function addBrand (req, res, next) {
 
     var schema = Joi.object().keys({
         name        : Joi.string().required()
+    });
+
+    var validFields = validateFields(req.handlerInfo, req.body, res, schema);
+    if(validFields){
+        next();
+    }else{
+        responses.parameterMissingResponse(req.handlerInfo, res);
+    }
+};
+
+function generateWHReplenishment (req, res, next) {
+    req.handlerInfo = {
+        apiModule: 'warehouse',
+        apiHandler: 'generateWHReplenishment'
+    };
+
+    logging.trace(req.handlerInfo, {VALIDATING : req.body});
+
+    var schema = Joi.object().keys({
+        brand_id        :   Joi.number().required(),
+        wh_id        : Joi.string().required(),
+        wh_inventory_date : Joi.string().required(),
+        store_inventory_date : Joi.string().required()
     });
 
     var validFields = validateFields(req.handlerInfo, req.body, res, schema);
