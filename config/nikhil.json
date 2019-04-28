@@ -1,0 +1,10 @@
+{
+  "PORT" : 5000,
+  "databaseSettings" :{
+    "host"      : "remotemysql.com",
+    "user"      :  "c7dJ7C7kO3",
+    "password"  : "pqiNjljPFH",
+    "database"  : "c7dJ7C7kO3",
+    "port"      : 3306
+  }
+}
